@@ -1,36 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Nevara — Inventario y Ventas
 
-## Getting Started
+Aplicación de inventario, ventas y facturación de Nevara Beauty Makeup.
+Next.js (App Router) + Supabase (Postgres + Auth). Sin backend propio:
+el navegador habla directo contra la API REST de Supabase (PostgREST),
+protegida por Row Level Security.
 
-First, run the development server:
+## 1. Configurar variables de entorno
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+Copia `.env.example` a `.env.local` y completa:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+NEXT_PUBLIC_EMAILJS_SERVICE_ID=...
+NEXT_PUBLIC_EMAILJS_TEMPLATE_ID=...
+NEXT_PUBLIC_EMAILJS_PUBLIC_KEY=...
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 2. Base de datos
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Corre `nevara_schema.sql` en el SQL Editor de tu proyecto de Supabase
+(tablas, RLS y la función `create_sale`).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Crea manualmente los 1-2 usuarios en Authentication → Users (email/password).
 
-## Learn More
+## 3. Logo
 
-To learn more about Next.js, take a look at the following resources:
+Reemplaza `/public/logo.png` con el logo real de Nevara (usado en el
+header y en la factura).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 4. Correr localmente
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+npm install
+npm run dev
+```
 
-## Deploy on Vercel
+## 5. Desplegar en Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Conecta el repo a Vercel y define las mismas variables de entorno en
+Project Settings → Environment Variables.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Arquitectura
+
+```
+app/                    → páginas (rutas) de Next.js
+components/             → UI reutilizable
+lib/services/           → capa de acceso a datos (habla con Supabase)
+lib/context/            → estado compartido (products, clients, sales)
+lib/utils/               → helpers de formato y estilos compartidos
+```
+
+Toda mutación (agregar producto, registrar venta, actualizar cliente)
+pasa por un servicio en `lib/services/`, nunca directo desde los
+componentes. La venta se registra de forma atómica vía la función RPC
+`create_sale` en Postgres (genera el número de factura y descuenta
+stock en una sola transacción, evitando condiciones de carrera).
