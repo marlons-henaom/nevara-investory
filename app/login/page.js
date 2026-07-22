@@ -50,7 +50,7 @@ export default function LoginPage() {
         }}
       >
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 24 }}>
-          <img src="/logo.png" alt="Nevara" style={{ width: 56, height: 56, marginBottom: 10 }} />
+          <img src="/PROFILE-INSTAGRAM-NEVARA.png" alt="Nevara" style={{ width: 56, height: 56, marginBottom: 10 }} />
           <div style={{ fontFamily: 'Georgia, serif', fontSize: 24, color: COLORS.mauveDark }}>Nevara</div>
           <div style={{ fontSize: 11, color: COLORS.gold, letterSpacing: 3 }}>BEAUTY MAKEUP</div>
         </div>

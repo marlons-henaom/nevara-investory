@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Dropdown } from 'primereact/dropdown';
 import { ShoppingCart, FileText, Plus, Minus, Trash2, Mail } from 'lucide-react';
 import { useNevaraData } from '@/lib/context/NevaraDataContext';
 import { useNotice } from '@/lib/hooks/useNotice';
@@ -26,6 +27,7 @@ export default function VentaPage() {
   const [cart, setCart] = useState([]);
   const [paymentStatus, setPaymentStatus] = useState('Pagado');
   const [paymentMethod, setPaymentMethod] = useState('Nequi');
+  const [montoParcial, setMontoParcial] = useState('');
   const [saving, setSaving] = useState(false);
   const [invoiceView, setInvoiceView] = useState(null);
 
@@ -79,6 +81,18 @@ export default function VentaPage() {
       return;
     }
 
+    const abono = parseFloat(montoParcial) || 0;
+    if (paymentStatus === 'Parcial') {
+      if (abono <= 0) {
+        showNotice('Escribe el abono inicial de la venta parcial', 'error');
+        return;
+      }
+      if (abono >= total) {
+        showNotice('El abono debe ser menor al total de la venta. Si paga el total, regístrala como Pagado', 'error');
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       const clientRecord = await clientsService.upsertByName({
@@ -91,7 +105,8 @@ export default function VentaPage() {
         clientId: clientRecord.id,
         clientEmail: clientEmail.trim(),
         paymentStatus,
-        paymentMethod: paymentStatus === 'Pagado' ? paymentMethod : '',
+        paymentMethod: paymentStatus !== 'Pendiente' ? paymentMethod : '',
+        amountPaid: paymentStatus === 'Parcial' ? abono : undefined,
         items: cart,
       });
 
@@ -100,6 +115,7 @@ export default function VentaPage() {
       setCart([]);
       setClient('');
       setClientEmail('');
+      setMontoParcial('');
       setInvoiceView(sale);
     } catch (e) {
       showNotice(e.message || 'No se pudo registrar la venta', 'error');
@@ -117,22 +133,22 @@ export default function VentaPage() {
         <label style={labelStyle}>Cliente</label>
         {!newClient ? (
           <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-            <select
+            <Dropdown
               value={client}
               onChange={(e) => {
-                setClient(e.target.value);
-                const found = clients.find((c) => c.name === e.target.value);
+                setClient(e.value);
+                const found = clients.find((c) => c.name === e.value);
                 setClientEmail(found?.email || '');
               }}
-              style={inputStyle}
-            >
-              <option value="">Selecciona un cliente…</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.name}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+              options={clients}
+              optionLabel="name"
+              optionValue="name"
+              filter
+              filterPlaceholder="Buscar cliente…"
+              placeholder="Selecciona un cliente…"
+              virtualScrollerOptions={{ itemSize: 38 }}
+              className="nevara-dropdown"
+            />
             <button
               onClick={() => {
                 setNewClient(true);
@@ -164,13 +180,25 @@ export default function VentaPage() {
 
         <label style={labelStyle}>Producto</label>
         <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-          <select value={selectedProduct} onChange={(e) => setSelectedProduct(e.target.value)} style={{ ...inputStyle, flex: 1 }}>
-            {products.map((p) => (
-              <option key={p.id} value={p.id} disabled={availableFor(p.id) <= 0}>
+          <Dropdown
+            value={selectedProduct}
+            onChange={(e) => setSelectedProduct(e.value)}
+            options={products}
+            optionLabel="name"
+            optionValue="id"
+            optionDisabled={(p) => availableFor(p.id) <= 0}
+            filter
+            filterPlaceholder="Buscar producto…"
+            placeholder="Selecciona un producto…"
+            virtualScrollerOptions={{ itemSize: 38 }}
+            className="nevara-dropdown"
+            style={{ flex: 1 }}
+            itemTemplate={(p) => (
+              <span>
                 {p.name} — {money(p.price)} ({availableFor(p.id)} disp.)
-              </option>
-            ))}
-          </select>
+              </span>
+            )}
+          />
           <input type="number" min={1} value={qty} onChange={(e) => setQty(parseInt(e.target.value) || 1)} style={{ ...inputStyle, width: 70 }} />
           <button onClick={addToCart} style={btnPrimary}>
             <Plus size={16} /> Agregar
@@ -180,7 +208,7 @@ export default function VentaPage() {
         <div style={{ marginTop: 20 }}>
           <label style={labelStyle}>Estado de pago</label>
           <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
-            {['Pagado', 'Pendiente'].map((s) => (
+            {['Pagado', 'Parcial', 'Pendiente'].map((s) => (
               <button
                 key={s}
                 onClick={() => setPaymentStatus(s)}
@@ -198,7 +226,7 @@ export default function VentaPage() {
               </button>
             ))}
           </div>
-          {paymentStatus === 'Pagado' && (
+          {(paymentStatus === 'Pagado' || paymentStatus === 'Parcial') && (
             <>
               <label style={labelStyle}>Método de pago</label>
               <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} style={{ ...inputStyle, marginBottom: 14 }}>
@@ -208,6 +236,20 @@ export default function VentaPage() {
                   </option>
                 ))}
               </select>
+            </>
+          )}
+          {paymentStatus === 'Parcial' && (
+            <>
+              <label style={labelStyle}>Abono inicial (debe ser menor al total)</label>
+              <input
+                type="number"
+                min={1}
+                max={total > 0 ? total - 1 : undefined}
+                value={montoParcial}
+                onChange={(e) => setMontoParcial(e.target.value)}
+                placeholder="Ej: 20000"
+                style={{ ...inputStyle, marginBottom: 14, width: '100%' }}
+              />
             </>
           )}
         </div>

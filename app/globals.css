@@ -25,6 +25,45 @@ html, body {
 button { font-family: inherit; cursor: pointer; }
 input, select { font-family: inherit; }
 
+/* Dropdown de PrimeReact (select con buscador + scroll virtualizado) ajustado
+   a la paleta de la app en vez del theme indigo por defecto. */
+.nevara-dropdown.p-dropdown {
+  width: 100%;
+  border-color: var(--pink);
+  border-radius: 8px;
+  font-size: 14px;
+}
+.nevara-dropdown.p-dropdown:not(.p-disabled).p-focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold);
+}
+.nevara-dropdown .p-dropdown-label {
+  color: var(--ink);
+  padding: 10px 12px;
+}
+.nevara-dropdown .p-dropdown-trigger {
+  color: var(--mauve-dark);
+}
+.p-dropdown-panel .p-dropdown-header {
+  background: var(--snow-warm);
+  border-color: var(--pink);
+}
+.p-dropdown-panel .p-dropdown-filter {
+  border-color: var(--pink);
+  font-size: 14px;
+}
+.p-dropdown-panel .p-dropdown-items .p-dropdown-item {
+  font-size: 14px;
+  color: var(--ink);
+}
+.p-dropdown-panel .p-dropdown-items .p-dropdown-item.p-highlight {
+  background: var(--pink-soft);
+  color: var(--mauve-dark);
+}
+.p-dropdown-panel .p-dropdown-items .p-dropdown-item:not(.p-highlight):not(.p-disabled).p-focus {
+  background: var(--snow-warm);
+}
+
 @media print {
   body * { visibility: hidden; }
   #invoice-print, #invoice-print * { visibility: visible; }

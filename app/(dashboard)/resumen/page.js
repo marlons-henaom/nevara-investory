@@ -12,15 +12,20 @@ export default function ResumenPage() {
   const router = useRouter();
   const { products, clients, sales } = useNevaraData();
 
+  const ventasCompletas = sales.filter((s) => s.paymentStatus == 'Pagado');
+  const ventasParciales = sales.filter((s) => s.paymentStatus == 'Parcial');
+
   const lowStock = products.filter((p) => p.stock <= 2);
   const totalStock = products.reduce((a, p) => a + p.stock, 0);
-  const totalVentas = sales.reduce((a, s) => a + s.total, 0);
+  const totalVentas = ventasCompletas.reduce((a, s) => a + s.total, 0);
+  const totalVentasP = ventasParciales.reduce((a, s) => a + s.amountPaid, 0);
   const pendientes = sales.filter((s) => s.paymentStatus === 'Pendiente');
   const pendienteTotal = pendientes.reduce((a, s) => a + s.total, 0);
   const inventarioValor = products.reduce((a, p) => a + p.stock * p.price, 0);
 
   const stats = [
-    { label: 'Ventas registradas', value: sales.length, sub: money(totalVentas) + ' en total' },
+    { label: 'Ventas registradas', value: ventasCompletas.length, sub: money(totalVentas) + ' en total' },
+    { label: 'Ventas Parciales', value: ventasParciales.length, sub: money(totalVentasP) + ' en total' },
     { label: 'Por cobrar', value: pendientes.length, sub: money(pendienteTotal), warn: pendientes.length > 0 },
     { label: 'Unidades en stock', value: totalStock, sub: money(inventarioValor) + ' en inventario' },
     { label: 'Clientes', value: clients.length, sub: 'registrados' },

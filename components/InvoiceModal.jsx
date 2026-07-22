@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Check, Trash2, Mail, Printer, X } from 'lucide-react';
-import { COLORS } from '@/lib/utils/colors';
+import { COLORS, paymentStatusColors } from '@/lib/utils/colors';
 import { money, fmtDate } from '@/lib/utils/format';
 import { btnSuccess, btnPrimary, btnDanger, btnGhost, inputStyle, labelStyle, iconBtn } from '@/lib/utils/styles';
 import { sendInvoiceEmail } from '@/lib/services/emailService';
@@ -39,6 +39,9 @@ export default function InvoiceModal({ sale, clients, showNotice, onClose, onCli
   const [sent, setSent] = useState(false);
   const cancel_sale_status = sale.paymentStatus == 'Anulada';
   const [paymentMethod, setPaymentMethod] = useState('Nequi');
+  const saldo = sale.total - (sale.amountPaid || 0);
+  const [abono, setAbono] = useState('');
+  const [payingAbono, setPayingAbono] = useState(false);
 
   const cancelSale = async () => {
     if(!confirm("¿Estas seguro/a de anular la factura?")){
@@ -67,7 +70,8 @@ export default function InvoiceModal({ sale, clients, showNotice, onClose, onCli
     try {
       const saleRecord = await salesService.updatePayedStatus({
         id: sale.id,
-        paymentMethod: paymentMethod
+        paymentMethod: paymentMethod,
+        total: sale.total,
       });
 
       await onClientEmailUpdated();
@@ -75,6 +79,40 @@ export default function InvoiceModal({ sale, clients, showNotice, onClose, onCli
     } catch (e) {
       showNotice(e.message || 'No se pudo registrar la venta', 'error');
     } finally{
+      onClose();
+    }
+  };
+
+  const registerAbono = async () => {
+    const monto = parseFloat(abono) || 0;
+    if (monto <= 0) {
+      showNotice('Escribe un valor de abono mayor a 0', 'error');
+      return;
+    }
+    if (monto > saldo) {
+      showNotice(`El abono no puede superar el saldo pendiente (${money(saldo)})`, 'error');
+      return;
+    }
+    if (!confirm(`¿Confirmas el abono de ${money(monto)}?`)) {
+      return;
+    }
+    setPayingAbono(true);
+    try {
+      const saleRecord = await salesService.registerPartialPayment({
+        id: sale.id,
+        amount: monto,
+        paymentMethod,
+      });
+      await onClientEmailUpdated();
+      showNotice(
+        saleRecord.paymentStatus === 'Pagado'
+          ? `Venta Paga - Factura ${saleRecord.invoiceNumber}`
+          : `Abono registrado - Factura ${saleRecord.invoiceNumber}`
+      );
+    } catch (e) {
+      showNotice(e.message || 'No se pudo registrar el abono', 'error');
+    } finally {
+      setPayingAbono(false);
       onClose();
     }
   };
@@ -124,7 +162,7 @@ export default function InvoiceModal({ sale, clients, showNotice, onClose, onCli
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 10 }}> 
             {sale.paymentStatus === 'Pendiente' && (
               <>
-                <label style={labelStyle}>MÃ©todo de pago</label>
+                <label style={labelStyle}>Método de pago</label>
                 <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} style={{ ...inputStyle }}>
                   {['Nequi', 'Efectivo', 'Transferencia', 'Daviplata', 'Otro'].map((m) => (
                     <option key={m} value={m}>
@@ -134,6 +172,30 @@ export default function InvoiceModal({ sale, clients, showNotice, onClose, onCli
                 </select>
                 <button onClick={paySale} style={btnSuccess}>
                   <Check size={15} /> Pagar
+                </button>
+              </>
+            )}
+            {sale.paymentStatus === 'Parcial' && (
+              <>
+                <label style={labelStyle}>Método de pago</label>
+                <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} style={{ ...inputStyle }}>
+                  {['Nequi', 'Efectivo', 'Transferencia', 'Daviplata', 'Otro'].map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="number"
+                  min={1}
+                  max={saldo}
+                  placeholder={`Abono (saldo ${money(saldo)})`}
+                  value={abono}
+                  onChange={(e) => setAbono(e.target.value)}
+                  style={{ ...inputStyle, width: 160 }}
+                />
+                <button onClick={registerAbono} disabled={payingAbono} style={{ ...btnSuccess, opacity: payingAbono ? 0.7 : 1 }}>
+                  <Check size={15} /> {payingAbono ? 'Registrando…' : 'Registrar abono'}
                 </button>
               </>
             )}
@@ -224,6 +286,18 @@ export default function InvoiceModal({ sale, clients, showNotice, onClose, onCli
                 <span>Total</span>
                 <strong style={{ color: COLORS.gold }}>{money(sale.total)}</strong>
               </div>
+              {sale.paymentStatus === 'Parcial' && (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginTop: 6, fontFamily: 'Arial, sans-serif' }}>
+                    <span>Abonado</span>
+                    <span>{money(sale.amountPaid)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontFamily: 'Arial, sans-serif', color: COLORS.danger }}>
+                    <span>Saldo</span>
+                    <strong>{money(saldo)}</strong>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -232,12 +306,11 @@ export default function InvoiceModal({ sale, clients, showNotice, onClose, onCli
               style={{
                 padding: '6px 14px',
                 borderRadius: 999,
-                background: sale.paymentStatus === 'Pagado' ? '#EAF4EC' : '#FBEAEA',
-                color: sale.paymentStatus === 'Pagado' ? '#3D7A4A' : COLORS.danger,
+                ...paymentStatusColors(sale.paymentStatus),
               }}
             >
               {sale.paymentStatus}
-              {sale.paymentMethod ? ' Â· ' + sale.paymentMethod : ''}
+              {sale.paymentMethod ? ' · ' + sale.paymentMethod : ''}
             </span>
           </div>
 

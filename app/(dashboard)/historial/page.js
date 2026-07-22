@@ -8,18 +8,22 @@ import Card from '@/components/Card';
 import SectionTitle from '@/components/SectionTitle';
 import Notice from '@/components/Notice';
 import InvoiceModal from '@/components/InvoiceModal';
-import { COLORS } from '@/lib/utils/colors';
+import { COLORS, paymentStatusColors } from '@/lib/utils/colors';
 import { money, fmtDate } from '@/lib/utils/format';
 
 export default function HistorialPage() {
   const { sales, clients, refresh } = useNevaraData();
   const { notice, showNotice } = useNotice();
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('Todos');
   const [invoiceView, setInvoiceView] = useState(null);
 
-  const filtered = sales.filter(
-    (s) => s.client.toLowerCase().includes(search.toLowerCase()) || s.invoiceNumber.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = sales.filter((s) => {
+    const matchesSearch =
+      s.client.toLowerCase().includes(search.toLowerCase()) || s.invoiceNumber.toLowerCase().includes(search.toLowerCase());
+    const matchesStatus = statusFilter === 'Todos' || s.paymentStatus === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <Card style={{ padding: 22 }}>
@@ -33,6 +37,25 @@ export default function HistorialPage() {
           onChange={(e) => setSearch(e.target.value)}
           style={{ border: 'none', background: 'transparent', outline: 'none', flex: 1, fontSize: 14 }}
         />
+      </div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+        {['Todos', 'Pagado', 'Parcial', 'Pendiente', 'Anulada'].map((s) => (
+          <button
+            key={s}
+            onClick={() => setStatusFilter(s)}
+            style={{
+              padding: '6px 14px',
+              borderRadius: 999,
+              fontSize: 13,
+              border: `1px solid ${statusFilter === s ? COLORS.gold : COLORS.pink}`,
+              background: statusFilter === s ? COLORS.pinkSoft : '#fff',
+              color: COLORS.mauveDark,
+              fontWeight: statusFilter === s ? 600 : 400,
+            }}
+          >
+            {s}
+          </button>
+        ))}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {filtered.length === 0 && <div style={{ color: COLORS.inkSoft, fontSize: 14 }}>No se encontraron ventas.</div>}
@@ -62,8 +85,7 @@ export default function HistorialPage() {
                 fontSize: 12,
                 padding: '4px 10px',
                 borderRadius: 999,
-                background: s.paymentStatus === 'Pagado' ? '#EAF4EC' : '#FBEAEA',
-                color: s.paymentStatus === 'Pagado' ? '#3D7A4A' : COLORS.danger,
+                ...paymentStatusColors(s.paymentStatus),
               }}
             >
               {s.paymentStatus}

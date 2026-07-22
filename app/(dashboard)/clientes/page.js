@@ -66,7 +66,10 @@ export default function ClientesPage() {
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {clients.map((c) => {
-          const count = sales.filter((s) => s.client_id === c.id).length;
+          const countSave = sales.filter((s) => s.client_id === c.id && s.paymentStatus == 'Pagado').length;
+          const countParcial = sales.filter((s) => s.client_id === c.id && s.paymentStatus == 'Parcial').length;
+          const countPend = sales.filter((s) => s.client_id === c.id && s.paymentStatus == 'Pendiente').length;
+          const countNul = sales.filter((s) => s.client_id === c.id && s.paymentStatus == 'Anulada').length;
           return (
             <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', border: `1px solid ${COLORS.pink}`, borderRadius: 10, fontSize: 14 }}>
               <div style={{ flex: 1 }}>
@@ -78,7 +81,10 @@ export default function ClientesPage() {
                   }}
                   style={{ ...inputStyle, width: 220 }}
                 />
-                <span style={{ color: COLORS.inkSoft, fontSize: 12 }}>· {count} compra{count !== 1 ? 's' : ''}</span>
+                <span style={{ color: COLORS.success, fontSize: 12 }}>· {countSave} compra{countSave !== 1 ? 's' : ''}</span>
+                <span style={{ color: COLORS.inkSoft, fontSize: 12 }}>· {countParcial} parcial{countParcial !== 1 ? 's' : ''}</span>
+                <span style={{ color: COLORS.gold, fontSize: 12 }}>· {countPend} pendiente{countPend !== 1 ? 's' : ''}</span>
+                <span style={{ color: COLORS.danger, fontSize: 12 }}>· {countNul} anulada{countNul !== 1 ? 's' : ''}</span>
               </div>
               <Mail size={14} color={COLORS.inkSoft} />
               <input
