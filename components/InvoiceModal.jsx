@@ -62,27 +62,6 @@ export default function InvoiceModal({ sale, clients, showNotice, onClose, onCli
     }
   };
 
-  const paySale = async () => {
-    if(!confirm("¿Estas seguro/a de pagar la factura?")){
-      return;
-    }
-    
-    try {
-      const saleRecord = await salesService.updatePayedStatus({
-        id: sale.id,
-        paymentMethod: paymentMethod,
-        total: sale.total,
-      });
-
-      await onClientEmailUpdated();
-      showNotice(`Venta Paga - Factura ${saleRecord.invoiceNumber}`);
-    } catch (e) {
-      showNotice(e.message || 'No se pudo registrar la venta', 'error');
-    } finally{
-      onClose();
-    }
-  };
-
   const registerAbono = async () => {
     const monto = parseFloat(abono) || 0;
     if (monto <= 0) {
@@ -160,22 +139,7 @@ export default function InvoiceModal({ sale, clients, showNotice, onClose, onCli
       <div style={{ background: '#fff', borderRadius: 16, width: 560, maxHeight: '90vh', overflow: 'auto', position: 'relative' }}>
         <div id="no-print" style={{ padding: '14px 20px 0' }}>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 10 }}> 
-            {sale.paymentStatus === 'Pendiente' && (
-              <>
-                <label style={labelStyle}>Método de pago</label>
-                <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} style={{ ...inputStyle }}>
-                  {['Nequi', 'Efectivo', 'Transferencia', 'Daviplata', 'Otro'].map((m) => (
-                    <option key={m} value={m}>
-                      {m}
-                    </option>
-                  ))}
-                </select>
-                <button onClick={paySale} style={btnSuccess}>
-                  <Check size={15} /> Pagar
-                </button>
-              </>
-            )}
-            {sale.paymentStatus === 'Parcial' && (
+            {(sale.paymentStatus === 'Pendiente' || sale.paymentStatus === 'Parcial') && (
               <>
                 <label style={labelStyle}>Método de pago</label>
                 <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} style={{ ...inputStyle }}>
@@ -195,7 +159,7 @@ export default function InvoiceModal({ sale, clients, showNotice, onClose, onCli
                   style={{ ...inputStyle, width: 160 }}
                 />
                 <button onClick={registerAbono} disabled={payingAbono} style={{ ...btnSuccess, opacity: payingAbono ? 0.7 : 1 }}>
-                  <Check size={15} /> {payingAbono ? 'Registrando…' : 'Registrar abono'}
+                  <Check size={15} /> {payingAbono ? 'Registrando…' : 'Registrar pago'}
                 </button>
               </>
             )}
