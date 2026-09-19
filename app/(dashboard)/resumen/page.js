@@ -22,10 +22,17 @@ export default function ResumenPage() {
   const pendientes = sales.filter((s) => s.paymentStatus === 'Pendiente');
   const pendienteTotal = pendientes.reduce((a, s) => a + s.total, 0);
   const inventarioValor = products.reduce((a, p) => a + p.stock * p.price, 0);
+  const faltaPorCobrarParcial = ventasParciales.reduce((a, s) => a + (s.total - s.amountPaid), 0);
 
   const stats = [
     { label: 'Ventas registradas', value: ventasCompletas.length, sub: money(totalVentas) + ' en total' },
     { label: 'Ventas Parciales', value: ventasParciales.length, sub: money(totalVentasP) + ' en total' },
+    {
+      label: 'Falta por cobrar (parcial)',
+      value: money(faltaPorCobrarParcial),
+      sub: `${ventasParciales.length} venta${ventasParciales.length !== 1 ? 's' : ''} parcial${ventasParciales.length !== 1 ? 'es' : ''}`,
+      warn: faltaPorCobrarParcial > 0,
+    },
     { label: 'Por cobrar', value: pendientes.length, sub: money(pendienteTotal), warn: pendientes.length > 0 },
     { label: 'Unidades en stock', value: totalStock, sub: money(inventarioValor) + ' en inventario' },
     { label: 'Clientes', value: clients.length, sub: 'registrados' },

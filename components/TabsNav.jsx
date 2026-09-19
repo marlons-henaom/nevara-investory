@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Package, ShoppingCart, FileText, Users } from 'lucide-react';
+import { Package, ShoppingCart, FileText, Users, Calculator, BarChart3 } from 'lucide-react';
 import { COLORS } from '@/lib/utils/colors';
 
 const TABS = [
@@ -11,6 +11,8 @@ const TABS = [
   { href: '/historial', label: 'Historial y facturas', icon: FileText },
   { href: '/inventario', label: 'Inventario', icon: Package },
   { href: '/clientes', label: 'Clientes', icon: Users },
+  { href: '/contabilidad', label: 'Contabilidad', icon: Calculator, prefix: true },
+  { href: '/reportes', label: 'Reportes', icon: BarChart3, prefix: true },
 ];
 
 export default function TabsNav() {
@@ -23,7 +25,7 @@ export default function TabsNav() {
     >
       {TABS.map((t) => {
         const Icon = t.icon;
-        const active = pathname === t.href;
+        const active = t.prefix ? pathname.startsWith(t.href) : pathname === t.href;
         return (
           <Link
             key={t.href}

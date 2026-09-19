@@ -1,14 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import { Package, Plus, Minus } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { Package, Plus, Save } from 'lucide-react';
 import { useNevaraData } from '@/lib/context/NevaraDataContext';
 import { useNotice } from '@/lib/hooks/useNotice';
 import Card from '@/components/Card';
 import SectionTitle from '@/components/SectionTitle';
 import Notice from '@/components/Notice';
 import { COLORS } from '@/lib/utils/colors';
-import { inputStyle, btnPrimary, iconBtn } from '@/lib/utils/styles';
+import { inputStyle, btnPrimary } from '@/lib/utils/styles';
 import { productsService } from '@/lib/services/productsService';
 
 export default function InventarioPage() {
@@ -19,26 +19,25 @@ export default function InventarioPage() {
   const [newPrice, setNewPrice] = useState('');
   const [newStock, setNewStock] = useState('');
   const [busyId, setBusyId] = useState(null);
+  const priceRefs = useRef({});
+  const stockRefs = useRef({});
 
-  const changeStock = async (product, delta) => {
-    const newStockValue = Math.max(0, product.stock + delta);
+  // Guarda precio y stock juntos, en una sola llamada al servicio (una sola
+  // sentencia UPDATE), para que nunca queden desincronizados entre sí.
+  const saveRow = async (product) => {
+    const price = Math.max(0, parseInt(priceRefs.current[product.id]?.value, 10) || 0);
+    const stock = Math.max(0, parseInt(stockRefs.current[product.id]?.value, 10) || 0);
+    if (price === product.price && stock === product.stock) return;
+
     setBusyId(product.id);
     try {
-      await productsService.updateStock(product.id, newStockValue);
+      await productsService.update(product.id, { price, stock });
       await refresh();
+      showNotice(`${product.name} actualizado`);
     } catch (e) {
-      showNotice('No se pudo actualizar el stock', 'error');
+      showNotice('No se pudo actualizar el producto', 'error');
     } finally {
       setBusyId(null);
-    }
-  };
-
-  const changePrice = async (product, price) => {
-    try {
-      await productsService.updatePrice(product.id, price);
-      await refresh();
-    } catch (e) {
-      showNotice('No se pudo actualizar el precio', 'error');
     }
   };
 
@@ -71,30 +70,44 @@ export default function InventarioPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ display: 'flex', gap: 12, padding: '8px 16px', fontSize: 12, color: COLORS.inkSoft, textTransform: 'uppercase' }}>
             <div style={{ flex: 1 }}>Producto</div>
-            <div style={{ width: 130 }}>Precio</div>
-            <div style={{ width: 160, textAlign: 'center' }}>Stock</div>
+            <div style={{ width: 110 }}>Precio</div>
+            <div style={{ width: 90, textAlign: 'center' }}>Stock</div>
+            <div style={{ width: 110 }} />
           </div>
           {products.map((p) => (
             <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', border: `1px solid ${COLORS.pink}`, borderRadius: 10 }}>
               <div style={{ flex: 1, fontSize: 14 }}>{p.name}</div>
               <input
+                key={`${p.id}-price-${p.price}`}
+                ref={(el) => (priceRefs.current[p.id] = el)}
                 type="number"
                 defaultValue={p.price}
-                onBlur={(e) => {
-                  const val = parseInt(e.target.value) || 0;
-                  if (val !== p.price) changePrice(p, val);
+                disabled={busyId === p.id}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') saveRow(p);
                 }}
                 style={{ ...inputStyle, width: 110 }}
               />
-              <div style={{ width: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                <button onClick={() => changeStock(p, -1)} disabled={busyId === p.id} style={iconBtn}>
-                  <Minus size={13} />
-                </button>
-                <span style={{ minWidth: 24, textAlign: 'center', fontWeight: 600, color: p.stock <= 2 ? COLORS.danger : COLORS.ink }}>{p.stock}</span>
-                <button onClick={() => changeStock(p, 1)} disabled={busyId === p.id} style={iconBtn}>
-                  <Plus size={13} />
-                </button>
-              </div>
+              <input
+                key={`${p.id}-stock-${p.stock}`}
+                ref={(el) => (stockRefs.current[p.id] = el)}
+                type="number"
+                defaultValue={p.stock}
+                disabled={busyId === p.id}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') saveRow(p);
+                }}
+                style={{
+                  ...inputStyle,
+                  width: 90,
+                  textAlign: 'center',
+                  fontWeight: 600,
+                  color: p.stock <= 2 ? COLORS.danger : COLORS.ink,
+                }}
+              />
+              <button onClick={() => saveRow(p)} disabled={busyId === p.id} style={{ ...btnPrimary, width: 110, opacity: busyId === p.id ? 0.6 : 1 }}>
+                <Save size={14} /> {busyId === p.id ? 'Guardando…' : 'Guardar'}
+              </button>
             </div>
           ))}
         </div>
